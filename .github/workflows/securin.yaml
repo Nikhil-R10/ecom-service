@@ -6,7 +6,7 @@ name: Securin Scan
 jobs:
   scanning:
     env:
-      APP_ID: 4eca4bee8170a0efbf502de628954b1c6cb038f6e49b9e63f1dcc53f83388ca3
+      APP_ID: d48e09633838b2c533ecf61093956489cea54cbdc2d24bdb069c9ddb5f65136a
     steps:
     - name: Access token
       id: access_token
@@ -21,13 +21,11 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build with Maven
       run: mvn -q --batch-mode --update-snapshots verify
-    - name: Build Image
-      run: docker build . --file Dockerfile --tag vishal-ceg/ecom-service:latest
     - name: Scan Initiated
       run: |-
         docker login --username  ${{fromJson(steps.auth_token.outputs.authTokenJson).user}} --password ${{fromJson(steps.auth_token.outputs.authTokenJson).password}} ${{fromJson(steps.auth_token.outputs.authTokenJson).proxyUrl}}
-        docker pull -q 535827507377.dkr.ecr.us-west-2.amazonaws.com/shiftleft-cli:latest
-        docker run -v ${{github.workspace}}:/workdir  --volume /var/run/docker.sock:/var/run/docker.sock  535827507377.dkr.ecr.us-west-2.amazonaws.com/shiftleft-cli:latest -user ${{ secrets.USER_NAME }} -pass ${{ secrets.PASSWORD }} -app_id ${{ env.APP_ID }} event:${{ github.event_name }}  pr_number:${{ github.event.number }}
+        docker pull -q ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}}
+        docker run -v ${{github.workspace}}:/src  --volume ${{github.workspace}}:/workdir  ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}} -user ${{ secrets.USER_NAME }} -pass ${{ secrets.PASSWORD }} -app_id ${{ env.APP_ID }} event:${{ github.event_name }}  pr_number:${{ github.event.number }}
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v1
       with:
