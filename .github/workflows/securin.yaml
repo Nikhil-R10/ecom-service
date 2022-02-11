@@ -21,13 +21,13 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build with Maven
       run: mvn -q --batch-mode --update-snapshots verify
+    - name: Build Image
+      run: docker build . --file Dockerfile --tag vijay/ecom-service:latest
     - name: Scan Initiated
       run: |-
         docker login --username  ${{fromJson(steps.auth_token.outputs.authTokenJson).user}} --password ${{fromJson(steps.auth_token.outputs.authTokenJson).password}} ${{fromJson(steps.auth_token.outputs.authTokenJson).proxyUrl}}
         docker pull -q ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}}
         docker run -v ${{github.workspace}}:/src  --volume ${{github.workspace}}:/workdir  ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}} -user ${{ secrets.USER_NAME }} -pass ${{ secrets.PASSWORD }} -app_id ${{ env.APP_ID }} event:${{ github.event_name }}  pr_number:${{ github.event.number }}
-    - name: Build Image
-      run: docker build . --file Dockerfile --tag vijay/ecom-service:latest
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v1
       with:
