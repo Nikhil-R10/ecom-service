@@ -3,22 +3,26 @@ name: Securin Scan
 "on":
 - workflow_dispatch
 - pull_request
+- push
 jobs:
   scanning:
     env:
       APP_ID: 5a57ee6b15f1e3a63603e3060232fc8467cc378a8e73482688e1ad7d9bae4322
-      REQ_URL_MAP: "${{toJSON('{\"SL_RESULTPARSER_API_HOST\":\"http://e105-171-61-227-164.ngrok.io/resultparserapi/v1\"\
-        ,\"SL_RESULT_API_HOST\":\"http://2850-171-61-227-164.ngrok.io/resultapi/v1\"\
-        ,\"SL_API_HOST\":\"http://0f32-171-61-227-164.ngrok.io/shiftleftapi\"}')}}"
+      REQ_URL_MAP: "${{toJSON('{\"SL_API_HOST\":\"http://4d63-27-58-137-12.ngrok.io/shiftleftapi\"\
+        ,\"SL_RESULTPARSER_API_HOST\":\"http://457e-27-58-137-12.ngrok.io/resultparserapi/v1\"\
+        ,\"SL_RESULT_API_HOST\":\"http://9475-27-58-137-12.ngrok.io/resultapi/v1\"\
+        }')}}"
     steps:
     - name: Retrieve Scan Info
       id: auth_token
-      run: "respJson=$(curl --location --request GET 'http://0f32-171-61-227-164.ngrok.io/shiftleftapi/scan-info?app_id=${{\
+      run: "respJson=$(curl --location --request GET 'http://4d63-27-58-137-12.ngrok.io/shiftleftapi/scan-info?app_id=${{\
         \ env.APP_ID }}'  --header 'Authorization: Bearer ${{secrets.CLI_ACCESS_TOKEN}}'\
         \  --data-raw ' ' )\necho \"::set-output name=authTokenJson::$respJson\""
     - uses: actions/checkout@v2
     - name: Build with Maven
       run: mvn -q --batch-mode --update-snapshots verify
+    - name: Build Docker Image
+      run: docker build . --file Dockerfile --tag vijay1984/ecom-service:latest
     - name: Scan Initiated
       id: sec_scan_init
       run: "docker login --username  ${{fromJson(steps.auth_token.outputs.authTokenJson).user}}\
@@ -26,9 +30,9 @@ jobs:
         \ ${{fromJson(steps.auth_token.outputs.authTokenJson).proxyUrl}}\ndocker pull\
         \ -q ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}}\ndocker\
         \ run -v ${{github.workspace}}:/src  --volume ${{github.workspace}}:/workdir\
-        \  ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}} -access_tkn\
-        \ ${{secrets.CLI_ACCESS_TOKEN}} -app_id ${{ env.APP_ID }} -req_url_map ${{\
-        \ env.REQ_URL_MAP }} event:${{ github.event_name }}  pr_number:${{ github.event.number\
+        \ -v /var/run/docker.sock:/var/run/docker.sock ${{fromJson(steps.auth_token.outputs.authTokenJson).imageTag}}\
+        \ -access_tkn ${{secrets.CLI_ACCESS_TOKEN}} -app_id ${{ env.APP_ID }} -req_url_map\
+        \ ${{ env.REQ_URL_MAP }} event:${{ github.event_name }}  pr_number:${{ github.event.number\
         \ }}"
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v1
